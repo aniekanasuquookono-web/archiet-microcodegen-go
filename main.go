@@ -1,9 +1,9 @@
-﻿// archiet-microcodegen-go v0.1.0
-// PRD text ÔåÆ Go chi app ÔåÆ ZIP. Pure Go stdlib. <1400 LOC.
-// Stage 1: ParsePRD(text)            ÔåÆ Manifest (language-agnostic)
-// Stage 2: ManifestToGenome(manifest) ÔåÆ Genome  (ArchiMate 3.2 typed)
-// Stage 3: RenderGenome(genome)      ÔåÆ map[string]string (Go chi-specific)
-// Stage 4: Pack(files)               ÔåÆ []byte (ZIP) or write to disk
+// archiet-microcodegen-go v0.1.0
+// PRD text → Go chi app → ZIP. Pure Go stdlib. <1400 LOC.
+// Stage 1: ParsePRD(text)            → Manifest (language-agnostic)
+// Stage 2: ManifestToGenome(manifest) → Genome  (ArchiMate 3.2 typed)
+// Stage 3: RenderGenome(genome)      → map[string]string (Go chi-specific)
+// Stage 4: Pack(files)               → []byte (ZIP) or write to disk
 // Zero external imports. Inspired by Karpathy's micrograd.
 package main
 
@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// ÔöÇÔöÇÔöÇ Domain types ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── Domain types ─────────────────────────────────────────────────────────────
 
 type FieldSpec struct {
 	Type     string `json:"type"`
@@ -80,7 +80,7 @@ type Genome struct {
 	ArchiMateElements []ArchiMateElement `json:"archimate_elements"`
 }
 
-// ÔöÇÔöÇÔöÇ String helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── String helpers ───────────────────────────────────────────────────────────
 
 var (
 	reNotAlnum  = regexp.MustCompile(`[^a-zA-Z0-9]+`)
@@ -138,7 +138,7 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// ÔöÇÔöÇÔöÇ Type maps ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── Type maps ────────────────────────────────────────────────────────────────
 
 var goGormTypes = map[string]string{
 	"string": "string", "text": "string", "integer": "int64", "int": "int64",
@@ -172,17 +172,17 @@ func goFieldDecl(fname string, fspec FieldSpec) string {
 	tags[0] += `"`
 	fname2 := pascal(fname)
 	if gt == "time.Time" {
-		// ensure time import hint in struct ÔÇö handled in template header
+		// ensure time import hint in struct — handled in template header
 	}
 	return fmt.Sprintf("\t%s %s `json:\"%s\" %s`", fname2, gt, fname, tags[0])
 }
 
-// ÔöÇÔöÇÔöÇ STAGE 1: ParsePRD ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── STAGE 1: ParsePRD ───────────────────────────────────────────────────────
 
 var (
 	reSection  = regexp.MustCompile(`(?im)^#{1,3}\s*(?:entities|data models|domain models|entity list)\s*:?\s*$`)
-	reEntName  = regexp.MustCompile(`(?m)^[\s\-\*\#]+\*{0,2}([A-Z][a-zA-Z0-9_]{1,40})\*{0,2}[ \t]*(?::|ÔÇö|-|[ \t]|$)`)
-	reField    = regexp.MustCompile(`(?m)^[\s\-\*]+([a-z_][a-z0-9_]{0,40})\s*[:ÔÇö\-]\s*([a-zA-Z]+)([^\n]*)`)
+	reEntName  = regexp.MustCompile(`(?m)^[\s\-\*\#]+\*{0,2}([A-Z][a-zA-Z0-9_]{1,40})\*{0,2}[ \t]*(?::|—|-|[ \t]|$)`)
+	reField    = regexp.MustCompile(`(?m)^[\s\-\*]+([a-z_][a-z0-9_]{0,40})\s*[:—\-]\s*([a-zA-Z]+)([^\n]*)`)
 	reInlField = regexp.MustCompile(`([a-z_][a-z0-9_]{0,40})\s*\(\s*([a-zA-Z]+)([^)]*)`)
 	reStory    = regexp.MustCompile(`(?im)As\s+(?:a|an)\s+([^,]+?),\s+I\s+want\s+(?:to\s+)?([^,]+?)(?:,?\s*so\s+that\s+([^.]+))?\.`)
 	reSolName  = regexp.MustCompile(`(?m)^#\s+(.+?)\s*$`)
@@ -279,7 +279,7 @@ func ParsePRD(text string) Manifest {
 	return Manifest{SolutionName: solutionName, Entities: entities, UserStories: stories, Integrations: integrations}
 }
 
-// ÔöÇÔöÇÔöÇ STAGE 2: ManifestToGenome ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── STAGE 2: ManifestToGenome ───────────────────────────────────────────────
 
 var workflowVerbs = map[string]bool{
 	"create": true, "update": true, "delete": true, "approve": true,
@@ -328,15 +328,15 @@ func ManifestToGenome(manifest Manifest) Genome {
 	}
 }
 
-// ÔöÇÔöÇÔöÇ STAGE 3: RenderGenome ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── STAGE 3: RenderGenome ───────────────────────────────────────────────────
 
-// Go model template ÔÇö {{MODEL_NAME}}, {{TABLE_NAME}}, {{FIELDS}}
+// Go model template — {{MODEL_NAME}}, {{TABLE_NAME}}, {{FIELDS}}
 const tModel = `package models
 
 import "time"
 
-// {{MODEL_NAME}} ÔÇö per-tenant entity. UserID scopes every record to its owner.
-// Every query MUST include WHERE user_id = ? ÔÇö no cross-user data leaks.
+// {{MODEL_NAME}} — per-tenant entity. UserID scopes every record to its owner.
+// Every query MUST include WHERE user_id = ? — no cross-user data leaks.
 type {{MODEL_NAME}} struct {
 	ID        string    ` + "`" + `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"` + "`" + `
 	UserID    string    ` + "`" + `json:"user_id" gorm:"column:user_id;not null;index"` + "`" + `
@@ -348,7 +348,7 @@ type {{MODEL_NAME}} struct {
 func ({{MODEL_NAME}}) TableName() string { return "{{TABLE_NAME}}" }
 `
 
-// Handler template ÔÇö {{ENTITY_PASCAL}}, {{ENTITY_SNAKE}}, {{ENTITY_PLURAL}}
+// Handler template — {{ENTITY_PASCAL}}, {{ENTITY_SNAKE}}, {{ENTITY_PLURAL}}
 const tHandler = `package handlers
 
 import (
@@ -454,7 +454,7 @@ type authRequest struct { Email string ` + "`" + `json:"email"` + "`" + `; Passw
 func setTokenCookie(w http.ResponseWriter, userID, email string) {
 	claims := jwt.MapClaims{"sub": userID, "email": email, "exp": time.Now().Add(7 * 24 * time.Hour).Unix()}
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(jwtSecret)
-	// JWT stored in httpOnly cookie ÔÇö never localStorage.
+	// JWT stored in httpOnly cookie — never localStorage.
 	http.SetCookie(w, &http.Cookie{
 		Name: "access_token", Value: token, HttpOnly: true,
 		SameSite: http.SameSiteLaxMode, MaxAge: 7 * 86400, Path: "/",
@@ -583,7 +583,7 @@ type User struct {
 func (User) TableName() string { return "users" }
 `
 
-// main.go template ÔÇö {{MODULE_PATH}}, {{ENTITY_ROUTES}}, {{MODEL_POINTERS}}, {{APP_NAME}}
+// main.go template — {{MODULE_PATH}}, {{ENTITY_ROUTES}}, {{MODEL_POINTERS}}, {{APP_NAME}}
 const tMainGo = `package main
 
 import (
@@ -621,12 +621,12 @@ func main() {
 		})
 	})
 
-	// Auth routes ÔÇö no JWT guard
+	// Auth routes — no JWT guard
 	r.Post("/auth/register", auth.Register)
 	r.Post("/auth/login", auth.Login)
 	r.Post("/auth/logout", auth.Logout)
 
-	// Protected routes ÔÇö JWT httpOnly cookie guard
+	// Protected routes — JWT httpOnly cookie guard
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.JWTMiddleware)
 {{ENTITY_ROUTES}}
@@ -639,7 +639,7 @@ func main() {
 }
 `
 
-// go.mod template for generated app ÔÇö {{MODULE_PATH}}
+// go.mod template for generated app — {{MODULE_PATH}}
 const tGoMod = `module {{MODULE_PATH}}
 
 go 1.21
@@ -804,15 +804,15 @@ func dedupe(ss []string) []string {
 
 func renderArchMd(genome Genome, entities map[string]Entity) string {
 	sb := strings.Builder{}
-	sb.WriteString("# Architecture ÔÇö " + genome.SolutionName + "\n\n")
-	sb.WriteString("Generated by archiet-microcodegen-go ┬À ArchiMate 3.2 element notation\n\n")
+	sb.WriteString("# Architecture — " + genome.SolutionName + "\n\n")
+	sb.WriteString("Generated by archiet-microcodegen-go · ArchiMate 3.2 element notation\n\n")
 	sb.WriteString("## Application Layer\n\n| Element | Type | Description |\n|---------|------|-------------|\n")
 	for _, el := range genome.ArchiMateElements {
 		sb.WriteString(fmt.Sprintf("| `%s` | %s | %s |\n", el.Name, el.Type, el.Description))
 	}
 	sb.WriteString("\n## Relationships\n\n```\n  " + genome.SolutionName + " (ApplicationComponent)\n")
 	for ename := range entities {
-		sb.WriteString("    ÔööÔöÇÔöÇ " + ename + " (DataObject)  [Realization]\n")
+		sb.WriteString("    └── " + ename + " (DataObject)  [Realization]\n")
 	}
 	sb.WriteString("```\n\nhttps://archiet.com?utm_source=pkg.go.dev&utm_medium=package&utm_campaign=microcodegen-go\n")
 	return sb.String()
@@ -850,7 +850,7 @@ func renderReadme(genome Genome, entities map[string]Entity) string {
 	return sb.String()
 }
 
-// ÔöÇÔöÇÔöÇ STAGE 4: Pack ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── STAGE 4: Pack ────────────────────────────────────────────────────────────
 
 func Pack(files map[string]string) ([]byte, error) {
 	buf := &bytes.Buffer{}
@@ -870,7 +870,7 @@ func Pack(files map[string]string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// ÔöÇÔöÇÔöÇ CLI ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─── CLI ──────────────────────────────────────────────────────────────────────
 
 func main() {
 	prdFile := flag.String("prd", "", "Path to PRD Markdown file (required)")
@@ -879,7 +879,7 @@ func main() {
 	flag.Parse()
 
 	if *prdFile == "" {
-		fmt.Fprintln(os.Stderr, "archiet-microcodegen-go ÔÇö PRD text ÔåÆ Go chi app\n")
+		fmt.Fprintln(os.Stderr, "archiet-microcodegen-go — PRD text → Go chi app\n")
 		fmt.Fprintln(os.Stderr, "Usage:")
 		fmt.Fprintln(os.Stderr, "  archiet-microcodegen-go -prd prd.md -out ./myapp/")
 		fmt.Fprintln(os.Stderr, "  archiet-microcodegen-go -prd prd.md -zip myapp.zip")
